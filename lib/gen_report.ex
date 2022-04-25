@@ -9,6 +9,27 @@ defmodule GenReport do
     |> Enum.reduce(report_acc(), fn line, report -> sum_values(line, report) end)
   end
 
+  def build_from_files(filenames) when not is_list(filenames),
+    do: {:error, "Please provide a list of strings"}
+
+  def build_from_files(filenames) do
+    filenames
+    |> Task.async_stream(&build/1)
+    |> Enum.reduce(report_acc(), fn {:ok, line}, report -> merge(line, report) end)
+  end
+
+  defp merge(map1, map2) do
+    Map.merge(map1, map2, &deep_resolve/3)
+  end
+
+  defp deep_resolve(_key, left = %{}, right = %{}) do
+    merge(left, right)
+  end
+
+  defp deep_resolve(_key, left, right) do
+    left + right
+  end
+
   defp sum_values(list, %{
          "all_hours" => all_hours,
          "hours_per_month" => hours_per_month,
